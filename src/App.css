@@ -1,0 +1,56 @@
+.container {
+  background-color: #040d21;
+  max-height: 926px;
+  height: 94vh;
+  min-height: 860px;
+  position: relative;
+}
+.hero {
+  padding: 8rem 0;
+  z-index: 1;
+  overflow: hidden;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  top: 0;
+  position: absolute;
+}
+
+.hero-glow {
+  top: 50%;
+  left: 50%;
+  width: 200%;
+  transform: translate(-50%, -50%);
+
+  pointer-events: none;
+  z-index: 1;
+  position: absolute;
+  border-style: none;
+}
+
+.globe-canvas-container {
+  margin: 0 auto;
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.webgl-canvas {
+  display: block;
+  height: 900px;
+  width: 900px;
+}
+
+.data-info {
+  position: absolute;
+  z-index: 3;
+  max-width: 450px;
+  background-color: rgba(0, 0, 0, 0.4);
+  font-size: 12px;
+  padding: 16px 32px 8px;
+  top: 0;
+  left: 0;
+  border-radius: 6px;
+  display: block;
+  color: white;
+}

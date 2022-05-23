@@ -8,6 +8,7 @@ import { OrbitControls } from "@react-three/drei";
 const DOT_COUNT = 60000;
 const IMAGE_HEIGHT = 200;
 const IMAGE_WIDTH = 400;
+const GLOBE_RADIUS = 600;
 const vector = new THREE.Vector3();
 const temp = new THREE.Object3D();
 
@@ -36,7 +37,7 @@ function App() {
         const phi = Math.acos(-1 + (2 * i) / DOT_COUNT);
         const theta = Math.sqrt(DOT_COUNT * Math.PI) * phi;
 
-        vector.setFromSphericalCoords(600, phi, theta);
+        vector.setFromSphericalCoords(GLOBE_RADIUS, phi, theta);
 
         // Create position
         const posSphere = new THREE.Vector3();
@@ -46,11 +47,10 @@ function App() {
         n.copy(vector);
         n.normalize();
 
-        // console.log(n);
         // Check position
         const uv = {
           u: Math.atan2(n.x, n.z) / (2 * Math.PI) + 0.5,
-          v: n.y * 0.5 + 0.5,
+          v: Math.asin(n.y) / Math.PI + 0.5,
         };
 
         const x = uv.u * IMAGE_WIDTH;
@@ -77,11 +77,15 @@ function App() {
       />
       <Canvas
         camera={{
-          position: [0, 0, -600 * 3.5],
+          position: [0, 0, -GLOBE_RADIUS * 3.5],
           far: 3600,
         }}
       >
         <OrbitControls />
+        <mesh>
+          <sphereGeometry args={[GLOBE_RADIUS]} />
+          <meshBasicMaterial color="#0a2645" opacity={0.5} />
+        </mesh>
         {positions && <Dots positions={positions} />}
       </Canvas>
     </div>
@@ -97,9 +101,12 @@ function Dots({ positions }: DotsProps) {
     if (ref && ref.current) {
       for (let i = 0; i < positions.length; i++) {
         let position = positions[i];
-        temp.lookAt(position);
 
+        // set rotation, position
         temp.position.set(position.x, -position.y, position.z);
+        temp.lookAt(0, 0, 0);
+
+        // calc matrix
         temp.updateMatrix();
 
         // create id for instances
@@ -114,8 +121,8 @@ function Dots({ positions }: DotsProps) {
   }, []);
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
-      <sphereBufferGeometry args={[4, 3, 2]} />
-      <meshBasicMaterial />
+      <circleBufferGeometry args={[2, 5]} />
+      <meshBasicMaterial color="#104b7f" side={THREE.DoubleSide} />
     </instancedMesh>
   );
 }
