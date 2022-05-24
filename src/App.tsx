@@ -1,14 +1,16 @@
-import { Canvas } from "@react-three/fiber";
-import { useEffect, useRef, useState } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import { InstancedMesh, Vector3 } from "three";
-import { OrbitControls } from "@react-three/drei";
+import { InstancedMesh } from "three";
+import { CubicBezierLine, OrbitControls } from "@react-three/drei";
+import { geoInterpolate } from "d3";
 
 // consts
 const DOT_COUNT = 60000;
 const IMAGE_HEIGHT = 200;
 const IMAGE_WIDTH = 400;
 const GLOBE_RADIUS = 600;
+const GLOBE_SQUARED = GLOBE_RADIUS * GLOBE_RADIUS;
 const vector = new THREE.Vector3();
 const temp = new THREE.Object3D();
 const center = new THREE.Vector3(0, 0, 0);
@@ -154,7 +156,7 @@ function Dots({ positions }: DotsProps) {
   return (
     <instancedMesh ref={ref} args={[undefined, undefined, positions.length]}>
       <circleBufferGeometry args={[2, 5]} />
-      <meshBasicMaterial color="#104b7f" side={THREE.DoubleSide} />
+      <meshBasicMaterial color="#104b7f" side={THREE.DoubleSide} />
     </instancedMesh>
   );
 }
@@ -177,16 +179,54 @@ interface ArcsProps {
 
 function Arc({ data }: ArcsProps) {
   const d = data[0];
+  const arcRef = useRef<any>(null);
   const startXYZ = toXYZ(d.gm.lat, d.gm.lon, GLOBE_RADIUS);
   const endXYZ = toXYZ(d.gop.lat, d.gop.lon, GLOBE_RADIUS);
 
-  const UB = toXYZ(47.92123, 106.918556, GLOBE_RADIUS);
+  const d3Interpolate = geoInterpolate(
+    [d.gm.lon, d.gm.lat],
+    [d.gop.lon, d.gop.lat]
+  );
+
+  const control1 = d3Interpolate(0.25);
+  const control2 = d3Interpolate(0.75);
+
+  // arc height to half the distance between points
+  const distanceBetween =
+    GLOBE_RADIUS * Math.acos(startXYZ.dot(endXYZ) / GLOBE_SQUARED);
+  const arcHeight = distanceBetween * 0.5 + GLOBE_RADIUS;
+  const controlXYZ1 = toXYZ(control1[1], control1[0], arcHeight);
+  const controlXYZ2 = toXYZ(control2[1], control2[0], arcHeight);
+
+  const arcMinTime = 1;
+  const arcMaxTime = 5;
+
+  const randomTime = useMemo(() => {
+    return (
+      (Math.floor(Math.random() * (arcMaxTime - arcMinTime + 1)) + arcMinTime) /
+      1000
+    );
+  }, []);
+
+  useFrame(() => {
+    arcRef.current.material.uniforms.dashOffset.value -= randomTime;
+  });
 
   return (
     <>
       <Pole xyz={startXYZ} />
       <Pole xyz={endXYZ} />
-      <Pole xyz={UB} />
+      <CubicBezierLine
+        start={startXYZ}
+        end={endXYZ}
+        midA={controlXYZ1}
+        midB={controlXYZ2}
+        color="#ffffff"
+        segments={44}
+        dashed
+        dashScale={0.00024}
+        ref={arcRef}
+      />
     </>
   );
 }
@@ -206,7 +246,7 @@ function Pole({ xyz }: PoleProps) {
   return (
     <group ref={groupRef} position={xyz}>
       <mesh rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[1, 1, 50, 5]} />
+        <cylinderGeometry args={[0.5, 0.5, 100, 5]} />
         <meshBasicMaterial color="#ffffff" />
       </mesh>
     </group>
