@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { InstancedMesh } from "three";
+import { InstancedMesh, Vector3 } from "three";
 import { OrbitControls } from "@react-three/drei";
 
 // consts
@@ -11,6 +11,37 @@ const IMAGE_WIDTH = 400;
 const GLOBE_RADIUS = 600;
 const vector = new THREE.Vector3();
 const temp = new THREE.Object3D();
+const center = new THREE.Vector3(0, 0, 0);
+
+type Coordinate = {
+  lat: number;
+  lon: number;
+};
+type PRType = {
+  uml: string;
+  gm: Coordinate;
+  uol: string;
+  gop: Coordinate;
+  l: string;
+  nwo: string;
+  pr: number;
+  ma: string;
+  oa: string;
+};
+
+const testData = [
+  {
+    uml: "Brisbane",
+    gm: { lat: -27.469, lon: 153.0235 },
+    uol: "Austin",
+    gop: { lat: 30.2711, lon: -97.7437 },
+    l: "Java",
+    nwo: "ConsenSys/teku",
+    pr: 5283,
+    ma: "2022-04-03T22:01:22Z",
+    oa: "2022-04-03T00:32:51Z",
+  },
+] as PRType[];
 
 function App() {
   const [mapData, setMapData] = useState<CanvasRenderingContext2D | null>(null);
@@ -87,6 +118,7 @@ function App() {
           <meshBasicMaterial color="#0a2645" opacity={0.5} />
         </mesh>
         {positions && <Dots positions={positions} />}
+        {positions && <Arc data={testData} />}
       </Canvas>
     </div>
   );
@@ -98,7 +130,7 @@ interface DotsProps {
 function Dots({ positions }: DotsProps) {
   const ref = useRef<InstancedMesh>(null);
   useEffect(() => {
-    if (ref && ref.current) {
+    if (ref.current) {
       for (let i = 0; i < positions.length; i++) {
         let position = positions[i];
 
@@ -124,6 +156,60 @@ function Dots({ positions }: DotsProps) {
       <circleBufferGeometry args={[2, 5]} />
       <meshBasicMaterial color="#104b7f" side={THREE.DoubleSide} />
     </instancedMesh>
+  );
+}
+
+function toXYZ(lat: number, lon: number, radius: number) {
+  const spherical = new THREE.Spherical(
+    radius,
+    THREE.MathUtils.degToRad(90 - lat),
+    THREE.MathUtils.degToRad(lon)
+  );
+  const vector = new THREE.Vector3();
+
+  vector.setFromSpherical(spherical);
+  return vector;
+}
+
+interface ArcsProps {
+  data: PRType[];
+}
+
+function Arc({ data }: ArcsProps) {
+  const d = data[0];
+  const startXYZ = toXYZ(d.gm.lat, d.gm.lon, GLOBE_RADIUS);
+  const endXYZ = toXYZ(d.gop.lat, d.gop.lon, GLOBE_RADIUS);
+
+  const UB = toXYZ(47.92123, 106.918556, GLOBE_RADIUS);
+
+  return (
+    <>
+      <Pole xyz={startXYZ} />
+      <Pole xyz={endXYZ} />
+      <Pole xyz={UB} />
+    </>
+  );
+}
+
+interface PoleProps {
+  xyz: THREE.Vector3;
+}
+
+function Pole({ xyz }: PoleProps) {
+  const groupRef = useRef<THREE.Group>(null);
+  useEffect(() => {
+    if (groupRef.current) {
+      groupRef.current.lookAt(center);
+    }
+  }, []);
+
+  return (
+    <group ref={groupRef} position={xyz}>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[1, 1, 50, 5]} />
+        <meshBasicMaterial color="#ffffff" />
+      </mesh>
+    </group>
   );
 }
 
